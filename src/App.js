@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers, utils } from "ethers";
-import abi from "./contracts/MemeCoin.json";
+import abi from "./contracts/GameCoin.json";
 
 function App() {
   const [isWalletConnected, setIsWalletConnected] = useState(false);
@@ -12,9 +12,13 @@ function App() {
   const [tokenOwnerAddress, setTokenOwnerAddress] = useState(null);
   const [yourWalletAddress, setYourWalletAddress] = useState(null);
   const [error, setError] = useState(null);
+  const [diceValue, setDiceValue] = useState({ diceA: 0, diceB: 0 });
+  const [gameMsg, setGameMsg] = useState("Welcome to GMC GameShop");
 
-  const contractAddress = '0xA36519CC45228D7E5437872c949802EcAb2f2deD';
+  const contractAddress = '0xF8A125f5ad8bA8b6F7Ee887Ec7935D72A8eD47b7';
   const contractABI = abi.abi;
+  const gamePart = '10';
+  const DiceMax = 100;
 
   const checkIfWalletIsConnected = async () => {
     try {
@@ -114,6 +118,52 @@ function App() {
     }
   }
 
+  const winTokens = async () => {
+    //event.preventDefault();
+    try {
+      if (window.ethereum) {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const tokenContract = new ethers.Contract(contractAddress, contractABI, signer);
+        console.log(signer);
+        const txn = await tokenContract.customer_mint(yourWalletAddress, utils.parseEther(gamePart));
+        console.log("Minting tokens...");
+        await txn.wait();
+        console.log("Tokens minted...", txn.hash);
+
+        let tokenSupply = await tokenContract.totalSupply();
+        tokenSupply = utils.formatEther(tokenSupply)
+        setTokenTotalSupply(tokenSupply);
+
+      } else {
+        console.log("Ethereum object not found, install Metamask.");
+        setError("Install a MetaMask wallet to get our token.");
+      }
+    } catch (error) {
+      console.log(error);
+      setDiceValue(prevFormData => ({ ...prevFormData, diceA: 0, diceB: 0}));
+      setGameMsg('You can try again anytime!');
+    }
+  }
+
+  const throwDice = async (event) => {
+    event.preventDefault();
+   // setDiceValue()
+   //Math.floor(Math.random() * DiceMax)
+    const user_throw = Math.floor(Math.random() * DiceMax);
+    const com_throw = Math.floor(Math.random() * DiceMax);
+    console.log('user_throw' + user_throw);
+    console.log('com_throw' + com_throw);
+    setDiceValue(prevFormData => ({ ...prevFormData, diceA: user_throw, diceB: com_throw}));
+   // Math.floor(Math.random() * DiceMax)
+   if ( user_throw > com_throw ) {
+      setGameMsg('You Win, you win 10 coins');
+      await winTokens();
+   } else {
+    setGameMsg('You Lose! You can try again.');
+   }
+  }
+
   const mintTokens = async (event) => {
     event.preventDefault();
     try {
@@ -152,8 +202,7 @@ function App() {
   return (
     <main className="main-container">
       <h2 className="headline">
-        <span className="headline-gradient">Meme Coin Project</span>
-        <img className="inline p-3 ml-2" src="https://i.imgur.com/5JfHKHU.png" alt="Meme Coin" width="60" height="30" />
+        <span className="headline-gradient">Game Coin Project</span>
       </h2>
       <section className="customer-section px-10 pt-5 pb-10">
         {error && <p className="text-2xl text-red-700">{error}</p>}
@@ -161,6 +210,23 @@ function App() {
           <span className="mr-5"><strong>Coin:</strong> {tokenName} </span>
           <span className="mr-5"><strong>Ticker:</strong>  {tokenSymbol} </span>
           <span className="mr-5"><strong>Total Supply:</strong>  {tokenTotalSupply}</span>
+        </div>
+        <div className="mt-5">
+          <span className="mr-5"><strong>If you press button get points more than computer, you can win 10 {tokenName}!</strong></span>
+        </div>
+        <div className="mt-5">
+        </div>
+        <div className="mt-7 mb-9">
+        <form className="form-style">
+          <div className="text-center">{gameMsg}</div>
+          <div className="text-center">Computer have points : {diceValue.diceB}</div>
+          <div className="text-center">You have points :  {diceValue.diceA}</div>
+          <button
+            className="btn-purple"
+            onClick={throwDice}>
+            Press to try your luck!
+          </button>
+          </form>
         </div>
         <div className="mt-7 mb-9">
           <form className="form-style">
